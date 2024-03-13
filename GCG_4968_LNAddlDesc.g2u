@@ -1,0 +1,797 @@
+Program.Sub.ScreenSU.Start
+Gui.frmAddLines..Create
+Gui.frmAddLines..Caption("Additional Lines")
+Gui.frmAddLines..Size(11715,9150)
+Gui.frmAddLines..MinX(0)
+Gui.frmAddLines..MinY(0)
+Gui.frmAddLines..Position(0,0)
+Gui.frmAddLines..BackColor(-2147483633)
+Gui.frmAddLines..MaxButton(False)
+Gui.frmAddLines..MousePointer(0)
+Gui.frmAddLines..Event(UnLoad,frmAddLines_UnLoad)
+Gui.frmAddLines..Event(Click,MenuClearGrid)
+Gui.frmAddLines..Event(Click,MenuCopyfromExcel)
+Gui.frmAddLines..AlwaysOnTop(True)
+Gui.frmAddLines.GsGridLines.Create(GsGridControl)
+Gui.frmAddLines.GsGridLines.Size(11280,7395)
+Gui.frmAddLines.GsGridLines.Position(90,435)
+Gui.frmAddLines.GsGridLines.Event(RowCellClick,GsGridLines_RowCellClick)
+Gui.frmAddLines.GsGridLines.Event(CellValueChanged,GsGridLines_CellValueChanged)
+Gui.frmAddLines.cmdOK.Create(Button)
+Gui.frmAddLines.cmdOK.Size(960,375)
+Gui.frmAddLines.cmdOK.Position(10350,8010)
+Gui.frmAddLines.cmdOK.Caption("OK")
+Gui.frmAddLines.cmdOK.Event(Click,cmdOK_Click)
+Gui.frmAddLines.lbl1.Create(Label,"* Note: Billable Quantity && Sizes",True,2745,255,0,1020,180,True,0,"Arial",8,-2147483633,0)
+Gui.frmAddLines.lbl1.FontStyle(True,False,False,False,False)
+Gui.frmAddLines.lbl2.Create(Label,"* Note: Finished Quantity && Sizes (to be printed on Sales Order)",True,5625,255,0,4875,180,True,0,"Arial",8,-2147483633,0)
+Gui.frmAddLines.lbl2.FontStyle(True,False,False,False,False)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+'Developed by RAN
+'Customer - AmeriLux International LLC
+'Arc project  4968
+
+
+V.Local.sError.Declare(String)
+v.Global.lRCnt.Declare 
+V.Global.bSave.Declare
+v.Global.sOrderNo.Declare
+v.Global.sOrderLn.Declare
+v.Global.sTransType.Declare
+
+V.Local.sText.Declare 
+V.Local.sFieldNames.Declare 
+V.Local.sRow.Declare 
+V.Local.sTypes.Declare 
+V.Local.dtnow.Declare(date)
+
+
+
+'Script1 SO & 'Part - Long order form
+f.Intrinsic.Control.If(v.Caller.Hook,=,12410)
+	f.Intrinsic.Control.If(Variable.Passed.000052.Trim,<>,"")
+		f.Intrinsic.String.LPad(v.Passed.000060,"0",7,v.Global.sOrderNo)
+		f.Intrinsic.String.LPad(v.Passed.000051,"0",3,v.Global.sOrderLn)
+		f.Intrinsic.String.RPad(v.Global.sOrderLn,"0",4,v.Global.sOrderLn)
+		v.Global.sTransType.Set("SO")
+		f.Intrinsic.Control.CallSub(load_grid)
+	f.Intrinsic.Control.Else
+		f.Intrinsic.UI.Msgbox("Select Part no")
+	f.Intrinsic.Control.EndIf 
+'Script1 SO & 'Part - short order form	
+f.Intrinsic.Control.elseIf(v.Caller.Hook,=,12620)
+	f.Intrinsic.Control.If(Variable.Passed.000071.Trim,<>,"")
+		f.Intrinsic.String.LPad(v.Passed.000005,"0",7,v.Global.sOrderNo)
+		f.Intrinsic.String.LPad(v.Passed.000013,"0",3,v.Global.sOrderLn)
+		f.Intrinsic.String.RPad(v.Global.sOrderLn,"0",4,v.Global.sOrderLn)
+		v.Global.sTransType.Set("SO")
+		f.Intrinsic.Control.CallSub(load_grid)
+	f.Intrinsic.Control.Else
+		f.Intrinsic.UI.Msgbox("Select Part no")
+	f.Intrinsic.Control.EndIf 
+'Populate Order Entry Lines Script1 SO Label
+f.Intrinsic.Control.elseIf(v.Caller.Hook,=,12010)
+	Variable.Passed.000162.Set("Piece Detail")
+'Populate Quick Quote Lines Entry Script1 SO Label
+
+f.Intrinsic.Control.elseIf(v.Caller.Hook,=,10260)
+	Variable.Passed.000201.Set("Piece Detail")
+f.Intrinsic.Control.elseIf(v.Caller.Hook,=,10670)	
+	'Variable.Passed.000060 quote
+	'Variable.Passed.000051 line
+	'Variable.Passed.000007 qty
+	'Variable.Passed.000052 part
+	f.Intrinsic.Control.If(Variable.Passed.000052.Trim,<>,"")
+		f.Intrinsic.String.LPad(v.Passed.000060,"0",7,v.Global.sOrderNo)
+		f.Intrinsic.String.LPad(v.Passed.000051,"0",3,v.Global.sOrderLn)
+		f.Intrinsic.String.RPad(v.Global.sOrderLn,"0",4,v.Global.sOrderLn)
+		v.Global.sTransType.Set("QO")
+		f.Intrinsic.Control.CallSub(load_grid)
+	f.Intrinsic.Control.Else
+		f.Intrinsic.UI.Msgbox("Select Part no")
+	f.Intrinsic.Control.EndIf 
+'Post SAve Quote WON/Loss
+'f.Intrinsic.Control.elseIf(v.Caller.Hook,=,17343)	
+'Quote Line POST Save
+f.Intrinsic.Control.elseIf(v.Caller.Hook,=,10532)	
+	f.Intrinsic.String.LPad(v.Passed.000060,"0",7,v.Global.sOrderNo)
+	F.ODBC.Connection!con.OpenCompanyConnection(300)
+
+	'update Userfield 5 to link Quote lines
+	'and record_Type = 'L' and Quote_Won = 'W'
+
+	f.Intrinsic.String.Build("update Quote_lines set USER_5 = Record_No where Quote_no = '{0}' ",v.Global.sOrderNo,V.Local.sText)
+	f.ODBC.Connection!con.Execute(V.Local.sText)
+	f.ODBC.Connection!con.Execute(V.Local.sText)
+	f.ODBC.Connection!con.Close 
+Function.Intrinsic.Control.EndIf
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.frmAddLines_UnLoad.Start
+F.Intrinsic.Control.SetErrorHandler("Load_Grid_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+variable.local.returnvalue.Declare(String)
+
+F.Intrinsic.Control.If(V.Global.bSave,=,True)
+	Function.Intrinsic.UI.MsgBox("Changes not saved, Do you want to save the changes ?", "Confirm", 4, variable.local.returnvalue)
+	F.Intrinsic.Control.If(variable.local.returnvalue,=,6)
+		f.Intrinsic.Control.CallSub(cmdOK_Click)
+	f.Intrinsic.Control.EndIf 
+f.Intrinsic.Control.EndIf 
+
+F.ODBC.Connection!con.Close
+F.Intrinsic.Control.End 
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Load_Grid_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.frmAddLines_UnLoad.End
+
+Program.Sub.Load_Grid.Start
+F.Intrinsic.Control.SetErrorHandler("Load_Grid_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.sType.Declare(String)
+v.Local.iTotClmn.Declare 
+v.Local.i.Declare
+v.Local.stitle.Declare
+'v.Local.sOrderNo.Declare
+'v.Local.sOrderLn.Declare
+v.local.iret.Declare 
+
+
+'F.Intrinsic.Debug.InvokeDebugger
+'
+'
+
+F.ODBC.Connection!con.OpenCompanyConnection(300)
+
+F.Intrinsic.Control.Label("LBLDT")
+f.Intrinsic.String.Build("select ID,Quote_Order_No,Quote_Order_Line,Trans_Type,Pieces,Pieces_Width,Pieces_Length,Finished_Pieces,Finished_Width,Finished_Length,Pieces_Detail,Created_User,Created_Date,Last_CHG_DATE,Last_CHG_USER  from GCG_4968_LNAddlDesc where Quote_Order_No = '{0}' and Quote_Order_Line = '{1}' order by ID",V.Global.sOrderNo,V.Global.sOrderLn,V.Local.sSQL)
+F.Intrinsic.Control.If(v.DataTable.DTLines.Exists,=,True)
+	F.Data.DataTable.Close("DTLines")
+f.Intrinsic.Control.EndIf 
+F.Data.DataTable.CreateFromSQL("DTLines","con",v.Local.sSQL,True)
+	f.Intrinsic.Control.If(Variable.DataTable.DTLines.rowcount,>,0)
+		v.Local.iret.Set(Variable.DataTable.DTLines.rowcount)
+	f.Intrinsic.Control.ElseIf(v.caller.Switches,=,"O")
+		'check (copying from) Quote WON/LOSS
+		f.Intrinsic.String.Build("select ID,det.order_no,det.record_no,'SO' as STYPE,Pieces,Pieces_Width,Pieces_Length,Pieces_Detail,Created_User,Created_Date,Last_CHG_USER,Last_CHG_DATE,Finished_Pieces,Finished_Width,Finished_Length from GCG_4968_LNAddlDesc join order_header hdr on hdr.quote = Quote_Order_No join order_lines Det on hdr.order_no = Det.order_no where hdr.order_no = '{0}' and Quote_Order_Line = Det.User_5 ",V.Global.sOrderNo,V.Local.sSQL)
+		F.Intrinsic.Control.If(v.DataTable.LNAddlDesc.Exists,=,True)
+			F.Data.DataTable.Close("LNAddlDesc")
+		f.Intrinsic.Control.EndIf 
+		F.Data.DataTable.CreateFromSQL("DTLNAddlDesc","con",v.Local.sSQL)
+		f.Intrinsic.Control.If(Variable.DataTable.DTLNAddlDesc.rowcount,>,0)
+			F.Data.DataTable.SaveToDB("DTLNAddlDesc","con","GCG_4968_LNAddlDesc","ID*!*order_no*!*record_no",256,"ID@!@ID*!*order_no@!@Quote_Order_No*!*record_no@!@Quote_Order_Line*!*STYPE@!@Trans_Type*!*Pieces@!@Pieces*!*Pieces_Width@!@Pieces_Width*!*Pieces_Length@!@Pieces_Length*!*Pieces_Detail@!@Pieces_Detail*!*Finished_Pieces@!@Finished_Pieces*!*Finished_Width@!@Finished_Width*!*Finished_Length@!@Finished_Length*!*Created_Date@!@Created_Date*!*Created_User@!@Created_User*!*Last_CHG_DATE@!@Last_CHG_DATE*!*Last_CHG_USER@!@Last_CHG_USER")
+			f.Intrinsic.String.Build("update order_header set USER_5 = '' where order_no = '{0}'",v.Global.sOrderNo,v.Local.sSQL)
+			f.ODBC.Connection!con.Execute(v.Local.sSQL)
+			'Start Over
+			f.Intrinsic.Control.GoTo("LBLDT")
+		f.Intrinsic.Control.Else
+			v.Local.iret.Set(0)
+		f.Intrinsic.Control.EndIf
+		F.Data.DataTable.Close("DTLNAddlDesc")
+	f.Intrinsic.Control.Else
+		v.Local.iret.Set(0)
+	f.Intrinsic.Control.EndIf
+
+	F.Data.DataView.Create("DTLines","DVLines")
+
+	gui.frmAddLines.GsGridLines.SuspendLayout 
+'Function.Intrinsic.Debug.InvokeDebugger
+'Function.Intrinsic.Debug.Stop
+
+'	'Summary filed for Total & Finished Piece total
+'	f.Data.DataTable.AddExpressionColumn("DTLines","Total","Long","(Pieces*Pieces_Width*Pieces_Length)/144")
+'	f.Data.DataTable.AddExpressionColumn("DTLines","Finished Total","Long","(Finished_Pieces*Finished_Width*Finished_Length)/144")
+
+	F.Data.DataTable.AddColumn("DTLines","Total",Float)
+	F.Data.DataTable.AddColumn("DTLines","Finished Total",Float)
+	
+	F.Data.DataTable.AddColumn("DTLines","Action","string","Delete")
+	
+	f.Intrinsic.Control.CallSub(Calc_Tot)
+	
+'	f.Intrinsic.Math.Add(v.local.iret,1,V.Global.lRCnt)
+	'Add Blank row for data entry
+	f.Data.DataTable.AddRow("DTLines","ID",v.local.iret,"Quote_Order_No",v.Global.sOrderNo,"Quote_Order_Line",v.Global.sOrderLn,"Trans_Type",v.Global.sTransType,"Action","Add","Created_Date",v.Ambient.now,"Created_User",v.Caller.User)
+	f.Intrinsic.Math.Add(v.local.iret,1,V.Global.lRCnt)
+
+	gui.frmAddLines.GsGridLines.AddGridViewFromDataView("GridView","DTLines","DVLines")
+
+	gui.frmAddLines.GsGridLines.GetColumnCount("GridView",v.Local.iTotClmn)
+	f.Intrinsic.Math.Sub(v.Local.iTotClmn,1,v.Local.iTotClmn)
+	f.Intrinsic.Control.For(v.Local.i,0,v.Local.iTotClmn,1)
+		gui.frmAddLines.GsGridLines.GetColumnNamebyIndex("GridView",v.Local.i,v.Local.stitle)
+		gui.frmAddLines.GsGridLines.SetColumnProperty("GridView",v.Local.stitle,"AllowEdit",False)
+		gui.frmAddLines.GsGridLines.SetColumnProperty("GridView",v.Local.stitle,"ReadOnly",True)
+
+		gui.frmAddLines.GsGridLines.SetColumnProperty("GridView",v.Local.stitle,"HeaderFontBold","True")
+		gui.frmAddLines.GsGridLines.SetColumnProperty("GridView",v.Local.stitle,"HeaderBackColor","#7FFF00")
+		gui.frmAddLines.GsGridLines.SetColumnProperty("GridView",v.Local.stitle,"HeaderHAlignment","Center")
+	f.Intrinsic.Control.Next(v.Local.i)
+
+	gui.frmAddLines.GsGridLines.SetGridViewProperty("GridView", "ColumnPanelRowHeight", "40")
+	Gui.frmAddLines.GsGridLines.SetGridviewProperty("GridView","OptionsViewRowAutoHeight",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Pieces","HeaderWordWrap","wrap")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Width","HeaderWordWrap","wrap")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Length","HeaderWordWrap","wrap")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Detail","HeaderWordWrap","wrap")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished Total","HeaderWordWrap","wrap")
+
+
+	gui.frmAddLines.GsGridLines.AddStyleFormatCOndition("GridView", "Action", "tagName1","NotEqual","1")
+	gui.frmAddLines.GsGridLines.SetStyleFormatCOnditionProperty("GridView",  "Action", "tagName1", "backcolor", "#D3D3D3")
+
+	gui.frmAddLines.GsGridLines.AddStyleFormatCOndition("GridView", "Action", "tagName1","NotEqual","1")
+	gui.frmAddLines.GsGridLines.SetStyleFormatCOnditionProperty("GridView",  "Action", "tagName1", "FontBold", True)
+
+
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces","AllowEdit",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces","ReadOnly",False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Width","AllowEdit",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Width","ReadOnly",False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Length","AllowEdit",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Length","ReadOnly",False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Detail","AllowEdit",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Detail","ReadOnly",False)
+
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Pieces","AllowEdit",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Pieces","ReadOnly",False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Width","AllowEdit",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Width","ReadOnly",False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Length","AllowEdit",True)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Length","ReadOnly",False)
+
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Width","Caption","Width")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Length","Caption","Length")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Pieces_Detail","Caption","Finished Detail")
+
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Pieces","Caption","Finished Pieces")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Width","Caption","Finished Width")
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished_Length","Caption","Finished Length")
+'	
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "ID", "Visible", False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Quote_Order_No", "Visible", False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Quote_Order_Line", "Visible", False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Trans_Type", "Visible", False)
+'	
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Created_User", "Visible", False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Created_Date", "Visible", False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Last_CHG_DATE", "Visible", False)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Last_CHG_USER", "Visible", False)
+	
+	
+	
+
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Action","MinWidth",70)
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Action","MaxWidth",70)
+
+	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Pieces_Detail", "CellWordWrap", "Wrap")
+'	
+
+'	gui.frmAddLines.GsGridLines.AddSummaryItem("GridView","Total","Total","Sum","","","##0.00")
+'	gui.frmAddLines.GsGridLines.AddSummaryItem("GridView","Finished Total","Finish Total","Sum","","","##0.00")
+
+	gui.frmAddLines.GsGridLines.AddSummaryItem("GridView","Total","Total","Sum","","","##0")
+	gui.frmAddLines.GsGridLines.AddSummaryItem("GridView","Finished Total","Finish Total","Sum","","","##0")
+
+	Gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Total","VisibleIndex",3)
+
+
+'	gui.frmAddLines.GsGridLines.SetColumnProperty("GridView", "Total", "EditMaskAsDisplayFormat", "Wrap")
+
+'	Gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Total","DisplayCustomNumeric","0.00")
+'	Gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Finished Total","DisplayCustomNumeric","0.00")
+	Gui.frmAddLines.GsGridLines.SetColumnProperty("GridView","Action","CellHAlignment","center")
+
+'	
+''	Gui.Form1.GsGCTest.SetColumnProperty("Gridview1", "RunnerSpeed", "EditMaskType", "numeric")
+''	Gui.Form1.GsGCTest.SetColumnProperty("Gridview1", "RunnerSpeed", "EditMask", "0000000")
+''	Gui.Form1.GsGCTest.SetColumnProperty("Gridview1", "RunnerSpeed", "EditMaskAsDisplayFormat", true)
+
+
+'	f.Data.DataTable.SetValueFormat("DTLines",-1,"Total","Total","0.00")
+
+	gui.frmAddLines.GsGridLines.SetGridViewProperty("GridView", "OptionsSelectionEnableAppearanceFocusedRow", "False") 
+
+
+	gui.frmAddLines.GsGridLines.ResumeLayout 
+
+	gui.frmAddLines.GsGridLines.MainView("GridView")
+
+	'Create Context Menus
+	f.Intrinsic.Control.CallSub(create_menus)
+
+	gui.frmAddLines.GsGridLines.Anchor(15)
+	gui.frmAddLines.cmdOK.Anchor(10)
+	gui.frmAddLines..Show 
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Load_Grid_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Load_Grid.End
+
+Program.Sub.GsGridLines_RowCellClick.Start
+F.Intrinsic.Control.SetErrorHandler("frmAddLines_UnLoad_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+Variable.local.sRet.Declare
+
+
+f.Intrinsic.Control.BlockEvents 
+f.Intrinsic.Control.If(V.Args.column,=,"Action")
+'	gui.frmAddLines.GsGridLines.GetCellValue("GridView",8,V.Args.RowIndex,Variable.local.sRet)
+	gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView",V.Args.column,V.Args.RowIndex,Variable.local.sRet)
+	'check key for Delete
+	f.Intrinsic.Control.If(Variable.local.sRet,=,"Delete")
+		f.Data.DataTable.DeleteRow("DTLines",V.Args.RowHandle)
+		F.Data.DataTable.SaveToDB("DTLines","con","GCG_4968_LNAddlDesc","ID*!*Quote_Order_No*!*Quote_Order_Line",4,"ID@!@ID*!*Quote_Order_No@!@Quote_Order_No*!*Quote_Order_Line@!@Quote_Order_Line*!*Trans_Type@!@Trans_Type*!*Pieces@!@Pieces*!*Pieces_Width@!@Pieces_Width*!*Pieces_Length@!@Pieces_Length*!*Pieces_Detail@!@Pieces_Detail*!*Finished_Pieces@!@Finished_Pieces*!*Finished_Width@!@Finished_Width*!*Finished_Length@!@Finished_Length*!*Created_Date@!@Created_Date*!*Created_User@!@Created_User*!*Last_CHG_DATE@!@Last_CHG_DATE*!*Last_CHG_USER@!@Last_CHG_USER")	
+		'To save comments
+		V.Global.bSave.Set(True)
+	f.Intrinsic.Control.Else 
+		'check key for ADD
+		'Validate for  Data Entry Fields
+		f.Intrinsic.Control.If(v.DataTable.DTLines(v.Args.Rowhandle).Pieces!FieldValtrim,=,"","or",v.DataTable.DTLines(v.Args.Rowhandle).Pieces_Width!FieldValtrim,=,"",v.DataTable.DTLines(v.Args.Rowhandle).Pieces_Length!FieldValtrim,=,"",v.DataTable.DTLines(v.Args.Rowhandle).Finished_Pieces!FieldValtrim,=,"",v.DataTable.DTLines(v.Args.Rowhandle).Finished_Width!FieldValtrim,=,"",v.DataTable.DTLines(v.Args.Rowhandle).Finished_Length!FieldValtrim,=,"")
+			f.Intrinsic.Control.UnBlockEvents 
+			f.Intrinsic.Control.ExitSub 
+		f.Intrinsic.Control.EndIf 
+		F.Data.DataTable.AcceptChanges("DTLines")
+		f.Intrinsic.Control.CallSub(cmdsave_click)
+
+		f.Intrinsic.Control.If(V.Args.bRet,=,True)
+			f.Data.DataTable.SetValue("DTLines",V.Args.RowHandle,"Action","Delete")
+
+			f.Data.DataTable.AddRow("DTLines","ID",v.Global.lRCnt,"Quote_Order_No",v.Global.sOrderNo,"Quote_Order_Line",v.Global.sOrderLn,"Trans_Type",v.Global.sTransType,"Action","Add","Created_Date",v.Ambient.now,"Created_User",v.Caller.User)
+			f.Intrinsic.Math.Add(V.Global.lRCnt,1,V.Global.lRCnt)
+			Gui.frmAddLines.GsGridLines.FocusCell("GridView",V.Args.RowIndex,2)
+		f.Intrinsic.Control.Endif
+	Function.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndIf
+f.Intrinsic.Control.UnBlockEvents 
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("frmAddLines_UnLoad_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	f.Intrinsic.Control.UnBlockEvents 
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.GsGridLines_RowCellClick.End
+
+Program.Sub.cmdsave_click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdsave_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sRet.Declare(string)
+V.Local.sFieldNames.Declare(string)
+V.Local.sTypes.Declare(string)
+
+F.Intrinsic.Control.If(V.DataView.DTLines!DVSave.Exists,=,True)
+	Function.Data.DataView.Close("DTLines","DVSave")
+f.Intrinsic.Control.EndIf 
+
+
+f.Data.DataView.Create("DTLines","DVSave",22,"Pieces > 0 and Pieces_Width >0 and Pieces_Length >0 and Finished_Pieces >0 and  Finished_Length >0 and Finished_Width >0","")
+
+f.Data.DataView.ToDataTable("DTLines","DVSave","DTSave")
+F.Data.DataTable.SaveToDB("DTSave","con","GCG_4968_LNAddlDesc","ID*!*Quote_Order_No*!*Quote_Order_Line",256,"ID@!@ID*!*Quote_Order_No@!@Quote_Order_No*!*Quote_Order_Line@!@Quote_Order_Line*!*Trans_Type@!@Trans_Type*!*Pieces@!@Pieces*!*Pieces_Width@!@Pieces_Width*!*Pieces_Length@!@Pieces_Length*!*Pieces_Detail@!@Pieces_Detail*!*Finished_Pieces@!@Finished_Pieces*!*Finished_Width@!@Finished_Width*!*Finished_Length@!@Finished_Length*!*Created_Date@!@Created_Date*!*Created_User@!@Created_User*!*Last_CHG_DATE@!@Last_CHG_DATE*!*Last_CHG_USER@!@Last_CHG_USER")
+
+'Save Line Details as Comments
+
+'f.Intrinsic.String.Build("[Pieces] + ' sheets - ' + [Pieces_Width]  + '{0} x ' + [Pieces_Length]  + '{0} ' + [Pieces_Detail]",v.Ambient.DblQuote,V.Local.sRet)
+
+'f.Intrinsic.String.Build("[Pieces] + ' sheets - ' + [Pieces_Width]  + '{0} x ' + [Pieces_Length]  + '{0} ' + IIF([Pieces_Detail]='','','')",v.Ambient.DblQuote,V.Local.sRet)
+
+
+'f.Intrinsic.String.Build("[Pieces] + ' sheets - ' + [Pieces_Width]  + '{0} x ' + [Pieces_Length]  + '{0} ' + [Comm_dup]",v.Ambient.DblQuote,V.Local.sRet)
+
+'change request - printing the billable quantities and sizes, not the printable sizes and quantity
+
+f.Intrinsic.String.Build("[Finished_Pieces] + ' sheets - ' + [Finished_Width]  + '{0} x ' + [Finished_Length]  + '{0} ' + [Comm_dup]",v.Ambient.DblQuote,V.Local.sRet)
+
+'
+'F.Intrinsic.Debug.InvokeDebugger
+'
+'F.Intrinsic.Debug.Stop
+
+'
+
+F.Data.DataTable.AddExpressionColumn("DTSave", "Comm_dup", "string", "isnull(Pieces_Detail,' ')")
+'Function.Data.DataTable.AddExpressionColumn("DTSave","Comm_dup","string","[Pieces_Detail] + ' '")
+Function.Data.DataTable.AddExpressionColumn("DTSave","Comments","string",V.Local.sRet)
+
+'combine all Line Details to single line.
+f.Data.DataView.Create("DTSave","DVcomm",22,"","")
+Function.Data.DataView.ToString("DTSave", "DVcomm", "Comments", "*!*",v.Ambient.NewLine, V.Local.sRet)
+
+f.Intrinsic.String.Build("{0}*!*{1}*!*9999*!*{2}",v.Global.sOrderNo,v.Global.sOrderLn,V.Local.sRet,V.Local.sRet)
+
+V.Local.sFieldNames.Set("Quote_Order_No*!*Quote_Order_Line*!*Order_Type*!*Comments")
+
+V.Local.sTypes.Set("String*!*String*!*long*!*String")
+
+F.Intrinsic.Control.If(v.DataTable.DTImport.Exists,=,True)
+	F.Data.DataTable.Close("DTImport")
+f.Intrinsic.Control.EndIf 
+
+F.Data.DataTable.CreateFromString("DTImport",V.Local.sRet,V.Local.sFieldNames,V.Local.sTypes,"*!*","",True)
+
+f.Intrinsic.Control.If(v.Global.sTransType,=,"QO")
+	F.Data.DataTable.SaveToDB("DTImport","con","Quote_LN_TEXT","Quote_Order_No*!*Quote_Order_Line*!*Order_Type",256,"Quote_Order_No@!@Quote_Number*!*Order_Type@!@Quote_Type*!*Quote_Order_Line@!@Quote_Line*!*Comments@!@Text")
+f.Intrinsic.Control.Else 
+	F.Data.DataTable.SaveToDB("DTImport","con","ORDER_LN_TEXT","Quote_Order_No*!*Quote_Order_Line*!*Order_Type",256,"Quote_Order_No@!@order_num*!*Order_Type@!@Order_Type*!*Quote_Order_Line@!@order_Line*!*Comments@!@Text")
+f.Intrinsic.Control.EndIf 
+Function.Data.DataView.Close("DTSave","DVcomm")	
+F.Data.DataTable.Close("DTImport")
+
+V.Global.bSave.Set(False)
+
+f.Intrinsic.Variable.AddRV("bRet","True")
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdsave_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.cmdsave_click.End
+
+Program.Sub.GsGridLines_CellValueChanged.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+Variable.local.sRet.Declare(String)
+V.Local.FPieces.Declare
+V.Local.FWidth.Declare
+V.Local.FLength.Declare
+v.local.fRet.Declare
+v.local.lRet.Declare
+
+gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView","Action",V.Args.RowIndex,Variable.local.sRet)
+f.Intrinsic.Control.If(Variable.local.sRet,<>,"Add")
+'capture changed user on modify
+	Function.Data.DataTable.SetValue("DTLines",V.Args.RowIndex,"Last_CHG_DATE",v.Ambient.now)
+	Function.Data.DataTable.SetValue("DTLines",V.Args.RowIndex,"Last_CHG_USER",v.Caller.User)
+f.Intrinsic.Control.EndIf 
+
+
+F.Intrinsic.Control.SelectCase(V.Args.COLUMN)
+	F.Intrinsic.Control.CaseAny("Pieces","Pieces_Width","Pieces_Length","PIECES","PIECES_WIDTH","PIECES_LENGTH")
+		gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView","Pieces",V.Args.RowIndex,V.local.FPieces)
+		gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView","Pieces_Width",V.Args.RowIndex,V.local.FWidth)
+		gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView","Pieces_Length",V.Args.RowIndex,V.local.FLength)
+	
+		f.Intrinsic.Math.Evaluate(([V.local.FPieces]*[V.local.FWidth]*[V.local.FLength])/144,v.local.fRet)
+		f.Intrinsic.Math.Ceiling(v.local.fRet,v.local.lRet)
+		gui.frmAddLines.GsGridLines.SetCellValueByColumnName("GridView","Total",V.Args.RowIndex,v.local.lRet)
+	F.Intrinsic.Control.CaseAny("Finished_Pieces","Finished_Width","Finished_Length","FINISHED_PIECES","FINISHED_WIDTH","FINISHED_LENGTH")
+		gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView","Finished_Pieces",V.Args.RowIndex,V.local.FPieces)
+		gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView","Finished_Width",V.Args.RowIndex,V.local.FWidth)
+		gui.frmAddLines.GsGridLines.GetCellValueByColumnName("GridView","Finished_Length",V.Args.RowIndex,V.local.FLength)
+	
+		f.Intrinsic.Math.Evaluate(([V.local.FPieces]*[V.local.FWidth]*[V.local.FLength])/144,v.local.fRet)
+		f.Intrinsic.Math.Ceiling(v.local.fRet,v.local.lRet)
+		gui.frmAddLines.GsGridLines.SetCellValueByColumnName("GridView","Finished Total",V.Args.RowIndex,v.local.lRet)
+F.Intrinsic.Control.EndSelect
+
+V.Global.bSave.Set(True)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.GsGridLines_CellValueChanged.End
+
+Program.Sub.Create_Menus.Start
+F.Intrinsic.Control.SetErrorHandler("Create_Menus_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+	gui.frmAddLines..ContextMenuCreate("MNUGRID")
+	Gui.frmAddLines.GsGridLines.ContextMenuAttach("MNUGRID")
+'	Gui.Form..ContextMenuAddItem("MNUGRID","Refresh",0,"Refresh")
+	Gui.frmAddLines..ContextMenuAddItem("MNUGRID","ClearGrid",0,"Clear Grid")
+	Gui.frmAddLines..ContextMenuAddItem("MNUGRID","CopyfromExcel",0,"Copy from Excel")
+	Gui.frmAddLines..ContextMenuSetItemEventHandler("MNUGRID","ClearGrid","MenuClearGrid")
+	Gui.frmAddLines..ContextMenuSetItemEventHandler("MNUGRID","CopyfromExcel","MenuCopyfromExcel")
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Create_Menus_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4391_WFDashboard.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Create_Menus.End
+
+Program.Sub.cmdOK_Click.Start
+F.Intrinsic.Control.SetErrorHandler("Create_Menus_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+Variable.Local.lret.Declare 
+
+
+'F.Intrinsic.Debug.InvokeDebugger
+'
+'
+
+'if data not saved
+F.Intrinsic.Control.If(V.Global.bSave,=,True)
+	f.Intrinsic.Control.CallSub(cmdsave_click)
+	f.Intrinsic.Control.If(V.Args.bRet,=,False)
+		f.Intrinsic.UI.Msgbox("Data not saved")
+		F.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.Endif
+f.Intrinsic.Control.EndIf 
+
+'Calculate Order/Quote Qty
+Function.Data.DataTable.Compute("DTLines","SUM(Total)","",Variable.Local.lret)
+'Assign QTY
+
+f.Intrinsic.Control.If(v.Caller.Hook,=,12620)
+'short order form	
+	Variable.Passed.000001.Set(Variable.Local.lret)
+f.Intrinsic.Control.else
+	' Quote or Long Order
+	Variable.Passed.000007.Set(Variable.Local.lret)
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.CallSub(frmaddlines_unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Create_Menus_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.cmdOK_Click.End
+
+Program.Sub.MenuClearGrid.Start
+F.Intrinsic.Control.SetErrorHandler("ClearGrid_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+variable.local.returnvalue.Declare(long)
+
+Function.Intrinsic.UI.MsgBox("Do you want to clear the grid ?", "Confirm", 4, variable.local.returnvalue)
+F.Intrinsic.Control.If(variable.local.returnvalue,=,6)
+	f.Intrinsic.Control.CallSub(ClearGrid)
+f.Intrinsic.Control.EndIf 
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("ClearGrid_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.MenuClearGrid.End
+
+Program.Sub.ClearGrid.Start
+F.Intrinsic.Control.SetErrorHandler("ClearGrid_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+
+'F.Intrinsic.Debug.InvokeDebugger
+'
+'
+'F.Intrinsic.Debug.Stop
+
+
+
+Function.Data.DataTable.DeleteRow("DTLines") 
+F.Data.DataTable.SaveToDB("DTLines","con","GCG_4968_LNAddlDesc","ID*!*Quote_Order_No*!*Quote_Order_Line",4,"ID@!@ID*!*Quote_Order_No@!@Quote_Order_No*!*Quote_Order_Line@!@Quote_Order_Line*!*Trans_Type@!@Trans_Type*!*Pieces@!@Pieces*!*Pieces_Width@!@Pieces_Width*!*Pieces_Length@!@Pieces_Length*!*Pieces_Detail@!@Pieces_Detail*!*Finished_Pieces@!@Finished_Pieces*!*Finished_Width@!@Finished_Width*!*Finished_Length@!@Finished_Length*!*Created_Date@!@Created_Date*!*Created_User@!@Created_User*!*Last_CHG_DATE@!@Last_CHG_DATE*!*Last_CHG_USER@!@Last_CHG_USER")
+F.Data.DataTable.AcceptChanges("DTLines")
+
+
+
+f.Data.DataTable.AddRow("DTLines","ID",v.Global.lRCnt,"Quote_Order_No",v.Global.sOrderNo,"Quote_Order_Line",v.Global.sOrderLn,"Trans_Type",v.Global.sTransType,"Action","Add","Created_Date",v.Ambient.now,"Created_User",v.Caller.User)
+f.Intrinsic.Math.Add(V.Global.lRCnt,1,V.Global.lRCnt)
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("ClearGrid_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.ClearGrid.End
+
+Program.Sub.MenuCopyfromExcel.Start
+F.Intrinsic.Control.SetErrorHandler("CopyfromExcel_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.iLoop.Declare(long)
+v.Local.iret.Declare(long)
+
+V.Local.sText.Declare 
+V.Local.sFieldNames.Declare 
+V.Local.sRow.Declare 
+V.Local.sRow1.Declare 
+V.Local.sTypes.Declare 
+V.Local.sFldFilter.Declare 
+
+
+f.Intrinsic.UI.GetClipboardText(V.Local.sText)
+
+
+'validate for grid format
+f.Intrinsic.String.Split(v.Local.sText,v.Ambient.Tab,V.Local.sRow)
+f.Intrinsic.String.Split(v.Local.sRow,v.Ambient.NewLine,V.Local.sRow)
+f.Intrinsic.Control.If(v.Local.sRow(0).trim,=,"OOB")
+	f.Intrinsic.UI.Msgbox("Invalid Grid format")
+	f.Intrinsic.Control.ExitSub 
+F.Intrinsic.Control.ElseIf(V.Local.sRow(0).IsNumeric,=,False)
+	f.Intrinsic.UI.Msgbox("Invalid Grid format")
+	f.Intrinsic.Control.ExitSub 
+f.Intrinsic.Control.endif
+
+
+'Clear Grid & Load Data
+f.Intrinsic.Control.CallSub(ClearGrid)
+Function.Data.DataTable.DeleteRow("DTLines") 
+
+V.Local.sFieldNames.Set("Pieces*!*Pieces_Width*!*Pieces_Length*!*Finished_Pieces*!*Finished_Width*!*Finished_Length*!*Pieces_Detail")
+V.Local.sTypes.Set("long*!*float*!*float*!*long*!*float*!*float*!*String")
+
+f.Intrinsic.String.Split(v.Local.sText,v.Ambient.NewLine,v.Local.sText)
+f.Intrinsic.variable.RemoveArrayElementByOrdinal(v.Local.sText,v.Local.sText.UBound,v.Local.sText)
+f.Intrinsic.String.Join(v.Local.sText,v.Local.sText)
+
+F.Intrinsic.Control.If(v.DataTable.DTImport.Exists,=,True)
+	F.Data.DataTable.Close("DTImport")
+f.Intrinsic.Control.EndIf 
+
+F.Data.DataTable.CreateFromString("DTImport",V.Local.sText,V.Local.sFieldNames,V.Local.sTypes,v.Ambient.Tab,"!*!",True)
+
+
+F.Data.DataTable.Merge("DTImport","DTLines",False,1)
+
+	f.Data.DataTable.SetValue("DTLines",-1,"Quote_Order_No",v.Global.sOrderNo,"Quote_Order_Line",v.Global.sOrderLn,"Trans_Type",v.Global.sTransType,"Created_Date",v.Ambient.now,"Created_User",v.Caller.User)
+
+	f.Intrinsic.Control.If(Variable.DataTable.DTLines.rowcount,>,0)
+		v.Local.iret.Set(Variable.DataTable.DTLines.rowcount)
+	f.Intrinsic.Control.EndIf
+
+
+	f.Intrinsic.Math.Sub(v.local.iret,1,V.local.iret)
+	f.Intrinsic.Math.Add(v.local.iret,1,V.Global.lRCnt)
+
+	'loop to sequence ID
+	f.Intrinsic.Control.For(V.Local.iLoop,0,v.Local.iret,1)
+		f.Data.DataTable.SetValue("DTLines",v.Local.iLoop,"ID",v.Local.iLoop)
+	f.Intrinsic.Control.Next(v.Local.iLoop)
+	f.Data.DataTable.AddRow("DTLines","ID",v.Global.lRCnt,"Quote_Order_No",v.Global.sOrderNo,"Quote_Order_Line",v.Global.sOrderLn,"Trans_Type",v.Global.sTransType,"Action","Add","Created_Date",v.Ambient.now,"Created_User",v.Caller.User)
+	f.Intrinsic.Math.Add(v.Global.lRCnt,1,V.Global.lRCnt)
+
+	f.Intrinsic.Control.CallSub(Calc_Tot)
+	
+	V.Global.bSave.Set(True)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("CopyfromExcel_Err")
+
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,=,21003)
+	f.Intrinsic.UI.Msgbox("Invalid Grid format")
+F.Intrinsic.Control.elseIf(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4968_LNAddlDesc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.MenuCopyfromExcel.End
+
+Program.Sub.Calc_Tot.Start
+F.Intrinsic.Control.SetErrorHandler("Sub_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.FPieces.Declare
+V.Local.FWidth.Declare
+V.Local.FLength.Declare
+v.local.fRet.Declare
+v.local.lRet.Declare
+v.local.lRet1.Declare
+v.local.i.Declare
+
+
+	f.Intrinsic.Control.For(v.Local.i,0,v.DataTable.DTLines.RowCount--,1)
+		V.Local.FPieces.Set(V.DataTable.DTLines(V.Local.i).Pieces!FieldValFloat)
+		V.Local.FWidth.Set(V.DataTable.DTLines(V.Local.i).Pieces_Width!FieldValFloat)
+		V.Local.FLength.Set(V.DataTable.DTLines(V.Local.i).Pieces_Length!FieldValFloat)
+		f.Intrinsic.Math.Evaluate(([V.local.FPieces]*[V.local.FWidth]*[V.local.FLength])/144,v.local.fRet)
+		f.Intrinsic.Math.Ceiling(v.local.fRet,v.local.lRet)
+		
+		V.Local.FPieces.Set(V.DataTable.DTLines(V.Local.i).Finished_Pieces!FieldValFloat)
+		V.Local.FWidth.Set(V.DataTable.DTLines(V.Local.i).Finished_Width!FieldValFloat)
+		V.Local.FLength.Set(V.DataTable.DTLines(V.Local.i).FINISHED_LENGTH!FieldValFloat)
+		f.Intrinsic.Math.Evaluate(([V.local.FPieces]*[V.local.FWidth]*[V.local.FLength])/144,v.local.fRet)
+		f.Intrinsic.Math.Ceiling(v.local.fRet,v.local.lRet1)
+		
+		F.Data.DataTable.SetValue("DTLines",v.Local.i,"Total",v.local.lRet,"Finished Total",v.local.lRet1)
+		
+	f.Intrinsic.Control.Next(v.Local.i)
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Sub_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: Project",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Calc_Tot.End
+
+Program.Sub.Comments.Start
+${$0$}$Lines Additional Description$}$RAN$}$4/25/2018 11:08:50 AM$}$False
+${$3$}$0$}$$}$0$}$-1$}$$}$12:00:00 AM$}$To create a program that will allow the user to copy piece information from their
+calculator spreadsheet, into a grid that will store this information in a custom table that
+is accessible by other programs/reports.
+Program.Sub.Comments.End
