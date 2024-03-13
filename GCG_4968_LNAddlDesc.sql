@@ -1,0 +1,17 @@
+CREATE TABLE "GCG_4968_LNAddlDesc"(
+ "ID" INTEGER NOT NULL ,
+ "Quote_Order_No" CHAR(7) NOT NULL ,
+ "Quote_Order_Line" CHAR(4) NOT NULL ,
+ "Trans_Type" VARCHAR(2),
+ "Pieces" INTEGER,
+ "Pieces_Width" DOUBLE,
+ "Pieces_Length" DOUBLE,
+ "Pieces_Detail" VARCHAR(50),
+ "Created_User" VARCHAR(8),
+ "Created_Date" DATETIME,
+ "Last_CHG_USER" VARCHAR(8),
+ "Last_CHG_DATE" DATETIME,
+ "Finished_Pieces" INTEGER,
+ "Finished_Width" DOUBLE,
+ "Finished_Length" DOUBLE,
+ PRIMARY KEY ("ID", "Quote_Order_No", "Quote_Order_Line"));
